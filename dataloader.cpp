@@ -42,7 +42,7 @@ Dataloader::Dataloader(ImagenetDatasets ds,
   assert(replicationFactor>0);
   assert(gradientAcclFactor>0);
   assert(batchPerStep>0);
-  assert(numWorkers>=4);
+  assert(numWorkers>=1);
 
   this->originalImagesInfo = ds.get_all_images();
   this->transforms = transforms;
@@ -68,7 +68,7 @@ Dataloader::Dataloader(ImagenetDatasets ds,
   for (auto i = 0; i < numWorkers; i++ ) {
     this->workers.create_thread(boost::bind(&Dataloader::work_thread,this));
   }
-  masterThread = boost::thread(boost::bind(&Dataloader::work_thread,this));
+  masterThread = boost::thread(boost::bind(&Dataloader::master_thread,this));
 
 }
 
@@ -92,11 +92,11 @@ void Dataloader::work_thread(){
       std::vector<Mat> bgr_planes;
       split(dstImage,bgr_planes);
 
-      float * _arr = arr + batch_index * this->transforms.channel * this->transforms.dstImageHeight * this->transforms.dstImageWidth;
-      for (auto c = 0 ; c < this->transforms.channel ; c++) {
-          int z = this->transforms.channel - 1 - c;
-          float * dst_addr = _arr + z * this->transforms.dstImageHeight * this->transforms.dstImageWidth;
-          for (auto j = 0; j <= this->transforms.dstImageHeight * this->transforms.dstImageWidth; j++)
+      float * _arr = arr + batch_index * this->channel * this->height * this->width;
+      for (auto c = 0 ; c < this->channel ; c++) {
+          int z = this->channel - 1 - c;
+          float * dst_addr = _arr + z * this->height * this->width;
+          for (auto j = 0; j <= this->height * this->width; j++)
             *(dst_addr+j) = static_cast<float> (bgr_planes[z].data[j]);
       }
       dstImage.release();
@@ -149,12 +149,21 @@ vector<pair<string,int>> Dataloader::get_next_batch_images_info() {
 }
 
 void Dataloader::master_thread(){
+
+  Py_Initialize();
+  np::initialize();
+
   while (this->totalSendSteps < this->totalSteps) {
+
+
+    auto start_time = boost::posix_time::microsec_clock::universal_time();
+
+
     vector<pair<string,int>> ImagesInfo = get_next_batch_images_info();
     unsigned long long arrSize = this->batchPerStep * 
-                          this->transforms.channel *
-                          this->transforms.dstImageHeight *
-                          this->transforms.dstImageWidth;
+                          this->channel *
+                          this->height *
+                          this->width;
     float * arr = new float[arrSize];
     int * labelArr = new int[this->batchPerStep];
     boost::latch* gen_latch = new boost::latch(batchPerStep);
@@ -182,9 +191,9 @@ void Dataloader::master_thread(){
                   height,
                   width
                 );
-    auto stride = py::make_tuple(this->transforms.dstImageWidth * this->transforms.dstImageHeight * this->transforms.channel,
-                  this->transforms.dstImageWidth * this->transforms.dstImageHeight,
-                  this->transforms.dstImageWidth,
+    auto stride = py::make_tuple(this->width * this->height * this->channel,
+                  this->width * this->height,
+                  this->width,
                   1) ;
     np::dtype dt1 = np::dtype::get_builtin<float>();
     auto mul_data_ex = np::from_data(arr,
@@ -197,9 +206,9 @@ void Dataloader::master_thread(){
                   this->gradientAcclFactor,
                   this->replicationFactor,
                   this->batchPerGraph,
-                  this->transforms.channel,
-                  this->transforms.dstImageHeight,
-                  this->transforms.dstImageWidth
+                  this->channel,
+                  this->height,
+                  this->width
                 );
     mul_data_ex = mul_data_ex.reshape(shape_dst);
 
@@ -225,6 +234,13 @@ void Dataloader::master_thread(){
   
     py::tuple batch = py::make_tuple(mul_data_ex, mul_data_ex_label);
     this->batches.put(batch);
+
+    auto end_time = boost::posix_time::microsec_clock::universal_time();
+    auto time_elapse = end_time - start_time;
+    int ticks_cast = time_elapse.ticks();
+    float avgImgsPerSecond = static_cast<float>(this->batchPerStep) * 1000000 / static_cast<float>(ticks_cast);
+    std::cout << "Time cost : " << ticks_cast <<" BPS: "<< this->batchPerStep << " imgs/s: " << avgImgsPerSecond << std::endl;
+
   }
 }
 

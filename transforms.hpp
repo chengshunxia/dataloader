@@ -16,8 +16,10 @@ public:
             int channel,
             int  dstImageHeight,
             int  dstImageWidth,
+            /*
             py::list mean,
             py::list std,
+            */
             float randomFlipProb = 0.5);
   cv::Mat transform(cv::Mat& input);
   cv::Mat resizeMat(cv::Mat& input);
