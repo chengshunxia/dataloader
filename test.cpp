@@ -75,6 +75,10 @@ int main(int argc, char ** argv) {
  }
  #endif
 
- boost::this_thread::sleep(boost::posix_time::milliseconds(10000000));
 
+ int len = dl.len();
+ for (auto i = 0; i<len; i++) {
+   dl.next();
+ }
+ 
 }

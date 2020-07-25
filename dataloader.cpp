@@ -256,6 +256,9 @@ void Dataloader::batchRelease(py::tuple tp){
   delete[] tp;
   */
 }
+int Dataloader::len() {
+  return this->totalSteps;
+}
 
 Dataloader::~Dataloader(){
   this->workers.interrupt_all();

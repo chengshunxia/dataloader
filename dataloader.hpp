@@ -42,6 +42,7 @@ public:
   void batchRelease(py::tuple tp);
   ~Dataloader();
   vector<pair<string,int>> get_next_batch_images_info();
+  int len();
   
 
 private:
