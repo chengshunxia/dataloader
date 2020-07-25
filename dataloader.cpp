@@ -33,7 +33,7 @@ Dataloader::Dataloader(ImagenetDatasets ds,
                       bool shuffle) 
                       : ds(ds)
                       , transforms(transforms)
-                      , imgReadQueue(100000)
+                      , imgReadQueue(1000000)
                       , batches(prefetchNum){
   if (isTraining) {
     assert(drop);
@@ -45,17 +45,17 @@ Dataloader::Dataloader(ImagenetDatasets ds,
   assert(numWorkers>=1);
 
   this->originalImagesInfo = ds.get_all_images();
-  this->transforms = transforms;
   this->channel = transforms.channel;
   this->height = transforms.dstImageHeight;
   this->width = transforms.dstImageWidth;
   int totalSamples = ds.len();
-  this->batchPerStep = batchPerGraph * 
+  this->batchPerStep = batchPerStep;
+  this->samplesPerStep = batchPerGraph * 
                          replicationFactor *
                          gradientAcclFactor * 
                          batchPerStep;
 
-  this->stepsPerEpoch = totalSamples / this->batchPerStep;
+  this->stepsPerEpoch = totalSamples / this->samplesPerStep;
   this->totalSteps = this->stepsPerEpoch * epochs;
   this->curtTotalSteps = 0;
   this->curStepsPerEpoch = 0;
@@ -115,7 +115,7 @@ void Dataloader::get_all_samples_Idx(){
 
 vector<pair<string,int>> Dataloader::get_next_batch_images_info() {
   //reset the this->remainedImagesIdx if needed 
-  if (this->remainedImagesIdx.size() < this->batchPerStep) {
+  if (this->remainedImagesIdx.size() < this->samplesPerStep) {
     get_all_samples_Idx();
   }
   std::vector<int> _tmp;
@@ -127,7 +127,7 @@ vector<pair<string,int>> Dataloader::get_next_batch_images_info() {
     std::set<int> rand_indices;
     boost::random::uniform_int_distribution<int> indice(0,this->remainedImagesIdx.size() - 1);
 
-    while (rand_indices.size() < this->batchPerStep) {
+    while (rand_indices.size() < this->samplesPerStep) {
         auto index = indice(rng);
         rand_indices.insert(index);
     }
@@ -139,7 +139,7 @@ vector<pair<string,int>> Dataloader::get_next_batch_images_info() {
     boost::random::random_number_generator<boost::mt19937> referenceRand(rng);
     std::random_shuffle(next_batch.begin(), next_batch.end(), referenceRand);
   } else {
-    for (auto i = 0; i < this->batchPerStep; i++) {
+    for (auto i = 0; i < this->samplesPerStep; i++) {
       int index = _tmp[i];
       next_batch.push_back(this->originalImagesInfo[index]);
       this->remainedImagesIdx.erase(index);
@@ -160,14 +160,14 @@ void Dataloader::master_thread(){
 
 
     vector<pair<string,int>> ImagesInfo = get_next_batch_images_info();
-    unsigned long long arrSize = this->batchPerStep * 
+    unsigned long long arrSize = this->samplesPerStep * 
                           this->channel *
                           this->height *
                           this->width;
     float * arr = new float[arrSize];
-    int * labelArr = new int[this->batchPerStep];
-    boost::latch* gen_latch = new boost::latch(batchPerStep);
-    for (auto i = 0; i < this->batchPerStep; i++) {
+    int * labelArr = new int[this->samplesPerStep];
+    boost::latch* gen_latch = new boost::latch(samplesPerStep);
+    for (auto i = 0; i < this->samplesPerStep; i++) {
       this->imgReadQueue.put(new fileReadRequest {
         ImagesInfo[i].first,
         arr,
@@ -238,8 +238,8 @@ void Dataloader::master_thread(){
     auto end_time = boost::posix_time::microsec_clock::universal_time();
     auto time_elapse = end_time - start_time;
     int ticks_cast = time_elapse.ticks();
-    float avgImgsPerSecond = static_cast<float>(this->batchPerStep) * 1000000 / static_cast<float>(ticks_cast);
-    std::cout << "Time cost : " << ticks_cast <<" BPS: "<< this->batchPerStep << " imgs/s: " << avgImgsPerSecond << std::endl;
+    float avgImgsPerSecond = static_cast<float>(this->samplesPerStep) * 1000000 / static_cast<float>(ticks_cast);
+    std::cout << "Time cost : " << ticks_cast <<" BPS: "<< this->samplesPerStep << " imgs/s: " << avgImgsPerSecond << std::endl;
 
   }
 }

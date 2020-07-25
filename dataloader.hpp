@@ -54,6 +54,7 @@ private:
   int replicationFactor;
   int gradientAcclFactor;
   int batchPerStep;
+  int samplesPerStep;
   int numWorkers;
   float prefetchNum;
   bool isTraining;
