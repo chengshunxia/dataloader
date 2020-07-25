@@ -81,12 +81,14 @@ int main(int argc, char ** argv) {
                   true,
                   shuffle);
 
-  #ifdef PRINT_SHUFFLE_BATCH_INDICE
+ #ifdef PRINT_SHUFFLE_BATCH_INDICE
  batch = dl_shuffle.get_next_batch_images_info();
  for (auto i = 0; i < batch.size(); i++) {
    std::cout << batch[i].first << " " << batch[i].second << std::endl;
  }
-  #endif
+ #endif
+
+
 
 
 }

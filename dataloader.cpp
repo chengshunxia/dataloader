@@ -1,7 +1,9 @@
 #include <assert.h>
+#include <algorithm>
 #include <boost/thread/thread.hpp> 
 #include <boost/thread/latch.hpp>
 #include <boost/python/numpy.hpp>
+#include <boost/random/random_number_generator.hpp>
 #include <boost/random/mersenne_twister.hpp>
 #include <boost/random/uniform_int_distribution.hpp>
 #include <opencv2/highgui/highgui.hpp>
@@ -140,6 +142,9 @@ vector<pair<string,int>> Dataloader::get_next_batch_images_info() {
       next_batch.push_back(this->originalImagesInfo[_tmp[*itr]]);
       this->remainedImagesIdx.erase(_tmp[*itr]);
     }
+    //need to shuffle the ret vector 
+    boost::random::random_number_generator<boost::mt19937> referenceRand(rng);
+    std::random_shuffle(next_batch.begin(), next_batch.end(), referenceRand);
   } else {
     for (auto i = 0; i < this->batchPerStep; i++) {
       int index = _tmp[i];
@@ -147,7 +152,6 @@ vector<pair<string,int>> Dataloader::get_next_batch_images_info() {
       this->remainedImagesIdx.erase(index);
     }
   }
-
   return next_batch;
 }
 
