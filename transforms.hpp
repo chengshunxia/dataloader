@@ -19,12 +19,12 @@ public:
             py::list mean,
             py::list std,
             float randomFlipProb = 0.5);
-  void transform(cv::Mat input, cv::Mat output);
-  void resizeMat(cv::Mat input, cv::Mat output);
-  void randomResizedCrop(cv::Mat input, cv::Mat output);
-  void randomHFlip(cv::Mat input, cv::Mat output);
-  void normalize(cv::Mat input);
-  void convertToFloat32();
+  cv::Mat transform(cv::Mat& input);
+  cv::Mat resizeMat(cv::Mat& input);
+  cv::Mat randomResizedCrop(cv::Mat& input);
+  cv::Mat randomHFlip(cv::Mat& input);
+  cv::Mat normalize(cv::Mat& input);
+
   int channel;
   int dstImageHeight;
   int dstImageWidth;

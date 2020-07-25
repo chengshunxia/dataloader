@@ -82,21 +82,12 @@ void Dataloader::work_thread(){
       boost::latch * gen_latch = request->gen_latch;
       Mat image;
       image = imread(filename, CV_LOAD_IMAGE_COLOR);  
-      if(! image.data )
+      if(image.empty())
       {
-        std::cout <<  "Could not open or find the image" << std::endl;
+        std::cout <<  "Could not open or find the image " << filename << std::endl;
         gen_latch->count_down();
       }
-      Mat dstImage;
-      this->transforms.transform(image,dstImage);
-      /*
-      Mat resized_image;
-      cv::resize(image,resized_image,Size(224,224));
-      Mat flipped_image;
-      cv::flip(resized_image,flipped_image,0);
-      Mat resized_image_fp32;
-      flipped_image.convertTo(resized_image_fp32,CV_32FC3);
-      */
+      Mat dstImage = this->transforms.transform(image);
 
       std::vector<Mat> bgr_planes;
       split(dstImage,bgr_planes);
@@ -108,6 +99,8 @@ void Dataloader::work_thread(){
           for (auto j = 0; j <= this->transforms.dstImageHeight * this->transforms.dstImageWidth; j++)
             *(dst_addr+j) = static_cast<float> (bgr_planes[z].data[j]);
       }
+      dstImage.release();
+      image.release();
       gen_latch->count_down();
     }
 }

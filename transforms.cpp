@@ -40,42 +40,74 @@ Transforms::Transforms (bool enableRandomHFlip,
   } 
 }
 
-void Transforms::transform(cv::Mat input, cv::Mat output) {
+cv::Mat Transforms::transform(cv::Mat& input) {
+  cv::Mat ret;
 
+  //do resize/RandomCropResize
+  cv::Mat resized;
   if (!this->enableRandomSizeCrop) {
-      this->resizeMat(input,output);
+      resized = this->resizeMat(input);
   } else {
-    randomResizedCrop(input,output);
+    resized = randomResizedCrop(input);
   }
-
+  
+  //Flip
+  cv::Mat flipped;
   if (enableRandomHFlip) {
-
+    flipped = randomHFlip(resized);
+  } else {
+    flipped = resized.clone();
   }
+
+  //Normalize or Convert to FP32 directly
+  cv::Mat fp32;
+  if (!enabelNormalize) {
+    flipped.convertTo(fp32,CV_32FC3, 1.0 / 255.0);
+  } else {
+    //call normalize function
+    fp32 = normalize(flipped);
+  }
+
+  ret = fp32.clone();
+
+  fp32.release();
+  flipped.release();
+  resized.release();
+  
+  return ret;
 }
 
-void Transforms::randomResizedCrop(cv::Mat input, cv::Mat output) {
-  cv::resize(input,output,Size(this->dstImageHeight,
-                               this->dstImageWidth));
-}
+cv::Mat Transforms::randomResizedCrop(cv::Mat& input) {
 
-void Transforms::resizeMat(cv::Mat input, cv::Mat output){
+  //don't crop temporarily 
+  Mat output;
   Size dstSize(this->dstImageHeight,
                this->dstImageWidth);
   cv::resize(input,output,dstSize);
+  return output.clone();
 }
-void Transforms::randomHFlip(cv::Mat input, cv::Mat output) {
+
+cv::Mat Transforms::resizeMat(cv::Mat& input){
+  Mat output;
+  Size dstSize(this->dstImageHeight,
+               this->dstImageWidth);
+  cv::resize(input,output,dstSize);
+  return output.clone();
+}
+
+cv::Mat Transforms::randomHFlip(cv::Mat& input) {
+  cv::Mat output;
   std::random_device rd;
   std::mt19937 gen(rd());
   std::uniform_real_distribution<> dis(0.0, 1.0);
   if (dis(gen) > this->randomFlipProb) {
     cv::flip(input,output,1);
   }
+  return output.clone();
 }
 
-void Transforms::normalize(cv::Mat input) {
-  
-}
+cv::Mat Transforms::normalize(cv::Mat& input) {
+  cv::Mat output;
 
-void Transforms::convertToFloat32() {
-
+  return output.clone();
 }
