@@ -103,20 +103,18 @@ cv::Mat Transforms::resizeMat(cv::Mat& input){
 }
 
 cv::Mat Transforms::randomHFlip(cv::Mat& input) {
-
-  //cannot flip the image since the output after cv::flip is empty
-  //need to figure it out
   cv::Mat output;
   std::random_device rd;
   std::mt19937 gen(rd());
   std::uniform_real_distribution<> dis(0.0, 1.0);
   if (dis(gen) > this->randomFlipProb) {
     cv::flip(input,output,1);
+    if (!output.data) {
+      raise(SIGSEGV);
+    }
+    return output.clone();
   }
-  if (!output.data) {
-    raise(SIGSEGV);
-  }
-  return output.clone();
+  return input.clone();
 }
 
 cv::Mat Transforms::normalize(cv::Mat& input) {

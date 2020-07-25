@@ -53,7 +53,7 @@ int main(int argc, char ** argv) {
   means.append(0.456);
   means.append(0.406);
 
-  Transforms t(false,false,false,3,224,224);
+  Transforms t(true,false,false,3,224,224);
   Dataloader dl(ds, 
                   t,
                   150,
