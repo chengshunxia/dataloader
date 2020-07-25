@@ -1,3 +1,6 @@
+#ifndef _DATALOADER_HPP
+#define _DATALOADER_HPP
+
 #include <vector>
 #include <utility>
 #include <boost/python.hpp>
@@ -38,6 +41,7 @@ public:
   py::tuple next();
   void batchRelease(py::tuple tp);
   ~Dataloader();
+  vector<pair<string,int>> get_next_batch_images_info();
   
 
 private:
@@ -70,8 +74,9 @@ private:
   set<int> remainedImagesIdx;
   vector<pair<string,int>> originalImagesInfo;
 
-  vector<pair<string,int>> get_next_batch_images_info();
   void work_thread();
   void master_thread();
   void get_all_samples_Idx();
 };
+
+#endif

@@ -3,11 +3,13 @@
 #include <random>
 #include <iostream>
 #include <boost/python.hpp>
+#include <boost/python/numpy.hpp>
 
 #include "transforms.hpp"
 
 using namespace cv;
 namespace py = boost::python;
+namespace np = boost::python::numpy;
 
 Transforms::Transforms (bool enableRandomHFlip,
   bool enableRandomSizeCrop,
@@ -19,6 +21,8 @@ Transforms::Transforms (bool enableRandomHFlip,
   py::list std,
   float randomFlipProb) {
 
+  Py_Initialize();
+  np::initialize();
   this->enableRandomHFlip = enableRandomHFlip;
   this->enableRandomSizeCrop = enableRandomSizeCrop;
   this->enabelNormalize = enabelNormalize;

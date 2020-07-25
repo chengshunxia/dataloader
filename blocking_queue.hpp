@@ -3,13 +3,13 @@
 
 #pragma once
 
-#include <condition_variable>
 #include <mutex>
 #include <queue>
 #include <vector>
 #include <assert.h>
 #include <iostream>
 #include <thread>
+#include <boost/thread.hpp>
 
 using namespace std::chrono_literals;
 
@@ -29,7 +29,7 @@ public:
 
 	void put(const T& x) {
 	//	std::cout << std::this_thread::get_id() << " puting" << x << std::endl;
-		std::unique_lock<std::mutex> locker(mtx_);
+		boost::unique_lock<boost::mutex> locker(mtx_);
 		notFullCV_.wait(locker, [this]() {return queue_.size() < maxSize_; });			
 
 		queue_.push(x);
@@ -38,7 +38,7 @@ public:
 
 	T take() {
 	//	std::cout << std::this_thread::get_id() << " taking" << std::endl;
-		std::unique_lock<std::mutex> locker(mtx_);
+		boost::unique_lock<boost::mutex> locker(mtx_);
 		notEmptyCV_.wait(locker, [this]() {return !queue_.empty(); });
 
 		T front(queue_.front());
@@ -53,7 +53,7 @@ public:
 	// @param outRes: reference result if take successfully
 	// @return take successfully or not
 	bool take(int timeout, T& outRes) {
-		std::unique_lock<std::mutex> locker(mtx_);
+		boost::unique_lock<boost::mutex> locker(mtx_);
 		notEmptyCV_.wait_for(locker, timeout*1ms, [this]() {return !queue_.empty(); });
 		if(queue_.empty()) return false;
 		
@@ -66,12 +66,12 @@ public:
 	// Checking BlockingQueue status from outside
 	// DO NOT use it as internal call, which will cause DEADLOCK
 	bool empty() const {
-		std::unique_lock<std::mutex> locker(mtx_);
+		boost::unique_lock<boost::mutex> locker(mtx_);
 		return queue_.empty();
 	}
 
 	size_t size() const {
-		std::unique_lock<std::mutex> locker(mtx_);
+		boost::unique_lock<boost::mutex> locker(mtx_);
 		return queue_.size();
 	}
 
@@ -80,9 +80,9 @@ public:
 	}
 
 private:
-	mutable std::mutex mtx_;
-	std::condition_variable notEmptyCV_;
-	std::condition_variable notFullCV_;
+	mutable boost::mutex mtx_;
+	boost::condition_variable notEmptyCV_;
+	boost::condition_variable notFullCV_;
 	size_t maxSize_;
 	std::queue<T> queue_;
 };

@@ -20,6 +20,7 @@ ImagenetDatasets::ImagenetDatasets(string imagefolder, bool isTraining) {
                                boost::system::errc::no_such_file_or_directory);
     */
   }
+  this->isTraining = isTraining;
   this->imageFolderPath = imagefolder;
   this->trainImagePath = imagefolder + "/train";
   this->validationImagePath = imagefolder + "/val";
