@@ -44,6 +44,7 @@ public:
   ~Dataloader();
   vector<pair<string,int>> get_next_batch_images_info();
   int len();
+  int get_steps_per_epoch();
   
 private:
   boost::thread_group* workers;

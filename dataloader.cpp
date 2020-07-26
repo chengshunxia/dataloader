@@ -53,6 +53,9 @@ Dataloader::Dataloader(ImagenetDatasets ds,
   this->height = transforms.dstImageHeight;
   this->width = transforms.dstImageWidth;
   int totalSamples = ds.len();
+  this->batchPerGraph = batchPerGraph;
+  this->replicationFactor = replicationFactor;
+  this->gradientAcclFactor = gradientAcclFactor;
   this->batchPerStep = batchPerStep;
   this->samplesPerStep = batchPerGraph * 
                          replicationFactor *
@@ -265,8 +268,13 @@ void Dataloader::batchRelease(py::tuple tp){
   delete[] tp;
   */
 }
+
 int Dataloader::len() {
   return this->totalSteps;
+}
+
+int Dataloader::get_steps_per_epoch() {
+  return this->stepsPerEpoch;
 }
 
 Dataloader::~Dataloader(){
