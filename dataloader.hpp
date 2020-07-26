@@ -3,6 +3,7 @@
 
 #include <vector>
 #include <utility>
+#include <memory>
 #include <boost/python.hpp>
 #include <boost/thread/thread.hpp> 
 #include <boost/thread/mutex.hpp>
@@ -11,9 +12,9 @@
 #include "datasets.hpp"
 #include "transforms.hpp"
 #include "blocking_queue.hpp"
-#include "transforms.hpp"
 
 using namespace cv;
+using namespace std;
 namespace py = boost::python;
 
 struct fileReadRequest {
@@ -44,10 +45,9 @@ public:
   vector<pair<string,int>> get_next_batch_images_info();
   int len();
   
-
 private:
-  boost::thread_group workers;
-  boost::thread masterThread;
+  boost::thread_group* workers;
+  boost::thread* masterThread;
   ImagenetDatasets ds;
   int epochs;
   int batchPerGraph;
@@ -69,9 +69,9 @@ private:
   int curStepsPerEpoch;
   int curEpoch;
   int totalSendSteps;
-  BoundedBlockingQueue<py::tuple> batches;
-  boost::mutex fetchMutex;
-  BoundedBlockingQueue<fileReadRequest*> imgReadQueue;
+  BoundedBlockingQueue<py::tuple>* batches;
+  //boost::mutex fetchMutex;
+  BoundedBlockingQueue<fileReadRequest*>* imgReadQueue;
   Transforms transforms;
   set<int> remainedImagesIdx;
   vector<pair<string,int>> originalImagesInfo;

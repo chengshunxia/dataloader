@@ -32,9 +32,7 @@ Dataloader::Dataloader(ImagenetDatasets ds,
                       bool drop,
                       bool shuffle) 
                       : ds(ds)
-                      , transforms(transforms)
-                      , imgReadQueue(1000000)
-                      , batches(prefetchNum){
+                      , transforms(transforms) {
   if (isTraining) {
     assert(drop);
   }
@@ -43,6 +41,12 @@ Dataloader::Dataloader(ImagenetDatasets ds,
   assert(gradientAcclFactor>0);
   assert(batchPerStep>0);
   assert(numWorkers>=1);
+
+  /*
+  Py_Initialize();
+  np::initialize();
+  */
+  np::initialize();
 
   this->originalImagesInfo = ds.get_all_images();
   this->channel = transforms.channel;
@@ -64,18 +68,22 @@ Dataloader::Dataloader(ImagenetDatasets ds,
   this->shuffle = shuffle;
 
   get_all_samples_Idx();
- 
+
+  this->imgReadQueue = new BoundedBlockingQueue<fileReadRequest*> (1000000);
+  this->batches =  new BoundedBlockingQueue<py::tuple> (prefetchNum);
+
+  this->workers = new boost::thread_group();
   for (auto i = 0; i < numWorkers; i++ ) {
-    this->workers.create_thread(boost::bind(&Dataloader::work_thread,this));
+    this->workers->create_thread(boost::bind(&Dataloader::work_thread,this));
   }
-  masterThread = boost::thread(boost::bind(&Dataloader::master_thread,this));
+  masterThread = new boost::thread(boost::bind(&Dataloader::master_thread,this));
 
 }
 
 //thread used to load imgs from disk
 void Dataloader::work_thread(){
   while (1) {
-      auto request = this->imgReadQueue.take();
+      auto request = this->imgReadQueue->take();
       auto filename = request->imgFilePath;
       float * arr = request->arr;
       int batch_index = request->index;
@@ -99,6 +107,7 @@ void Dataloader::work_thread(){
           for (auto j = 0; j <= this->height * this->width; j++)
             *(dst_addr+j) = static_cast<float> (bgr_planes[z].data[j]);
       }
+      delete request;
       dstImage.release();
       image.release();
       gen_latch->count_down();
@@ -150,13 +159,11 @@ vector<pair<string,int>> Dataloader::get_next_batch_images_info() {
 
 void Dataloader::master_thread(){
 
-  Py_Initialize();
-  np::initialize();
-
   while (this->totalSendSteps < this->totalSteps) {
 
-
+#ifdef TPUT_LOGGING
     auto start_time = boost::posix_time::microsec_clock::universal_time();
+#endif
 
 
     vector<pair<string,int>> ImagesInfo = get_next_batch_images_info();
@@ -168,7 +175,7 @@ void Dataloader::master_thread(){
     int * labelArr = new int[this->samplesPerStep];
     boost::latch* gen_latch = new boost::latch(samplesPerStep);
     for (auto i = 0; i < this->samplesPerStep; i++) {
-      this->imgReadQueue.put(new fileReadRequest {
+      this->imgReadQueue->put(new fileReadRequest {
         ImagesInfo[i].first,
         arr,
         this->curStepsPerEpoch,
@@ -233,13 +240,15 @@ void Dataloader::master_thread(){
     //format Label Numpy Array
   
     py::tuple batch = py::make_tuple(mul_data_ex, mul_data_ex_label);
-    this->batches.put(batch);
+    this->batches->put(batch);
 
+#ifdef TPUT_LOGGING
     auto end_time = boost::posix_time::microsec_clock::universal_time();
     auto time_elapse = end_time - start_time;
     int ticks_cast = time_elapse.ticks();
     float avgImgsPerSecond = static_cast<float>(this->samplesPerStep) * 1000000 / static_cast<float>(ticks_cast);
     std::cout << "Time cost : " << ticks_cast <<" BPS: "<< this->samplesPerStep << " imgs/s: " << avgImgsPerSecond << std::endl;
+#endif
 
   }
 }
@@ -247,7 +256,7 @@ void Dataloader::master_thread(){
 py::tuple Dataloader::next() {
   this->totalSendSteps++;
   this->curStepsPerEpoch++;
-  return this->batches.take();
+  return this->batches->take();
 }
 
 void Dataloader::batchRelease(py::tuple tp){
@@ -261,8 +270,13 @@ int Dataloader::len() {
 }
 
 Dataloader::~Dataloader(){
-  this->workers.interrupt_all();
-  this->workers.join_all();
-  masterThread.interrupt();
-  masterThread.join();
+  this->workers->interrupt_all();
+  this->workers->join_all();
+  masterThread->interrupt();
+  masterThread->join();
+
+  delete workers;
+  delete masterThread;
+  delete batches;
+  delete imgReadQueue;
 }
