@@ -2,6 +2,7 @@
 #include <iostream>
 #include "datasets.hpp"
 #include <boost/python.hpp>
+#include <boost/python/numpy.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/thread/thread.hpp>
 
@@ -13,10 +14,13 @@
 #define PRINT_SHUFFLE_BATCH_INDICE
 
 using namespace std;
-
-
+namespace py = boost::python;
+namespace np = boost::python::numpy;
 
 int main(int argc, char ** argv) {
+
+  Py_Initialize();
+  np::initialize();
   if (argc != 2) {
     cout << argv[0] << " Usage : " << endl;
     cout << "\t" << argv[0] << " imagenetDir" << endl;
@@ -33,7 +37,7 @@ int main(int argc, char ** argv) {
   }
   #endif
 
-  training = false;
+  training = true;
   ImagenetDatasets ds_val(argv[1], training);
 
   images = ds_val.get_all_images();
@@ -56,7 +60,7 @@ int main(int argc, char ** argv) {
   Transforms t(true,false,false,3,224,224);
   Dataloader dl(ds, 
                   t,
-                  150,
+                  2,
                   4,
                   8,
                   16,
