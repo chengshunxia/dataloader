@@ -42,12 +42,6 @@ Dataloader::Dataloader(ImagenetDatasets ds,
   assert(batchPerStep>0);
   assert(numWorkers>=1);
 
-  /*
-  Py_Initialize();
-  np::initialize();
-  */
-  np::initialize();
-
   this->originalImagesInfo = ds.get_all_images();
   this->channel = transforms.channel;
   this->height = transforms.dstImageHeight;

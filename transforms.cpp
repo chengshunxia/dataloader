@@ -24,10 +24,6 @@ Transforms::Transforms (bool enableRandomHFlip,
   */
   float randomFlipProb) {
   
-  /*
-  Py_Initialize();
-  np::initialize();
-  */
   this->enableRandomHFlip = enableRandomHFlip;
   this->enableRandomSizeCrop = enableRandomSizeCrop;
   this->enabelNormalize = enabelNormalize;
