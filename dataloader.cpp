@@ -185,27 +185,23 @@ void Dataloader::master_thread(){
       if (gen_latch->wait_for(boost::chrono::milliseconds(100)) ==  boost::cv_status::timeout)
           if (gen_latch->wait_until(boost::chrono::steady_clock::now()+boost::chrono::milliseconds(100)) ==  boost::cv_status::timeout)
             gen_latch->wait();
-
-    int first_dim = this->batchPerGraph * 
-                    this->replicationFactor * 
-                    this->gradientAcclFactor * 
-                    this->batchPerStep;
+    
+    np::dtype dt1 = np::dtype::get_builtin<float>();
+    int first_dim = this->samplesPerStep;
     auto shape = py::make_tuple(first_dim,
                   channel,
                   height,
                   width
                 );
-    auto stride = py::make_tuple(this->width * this->height * this->channel,
-                  this->width * this->height,
-                  this->width,
-                  1) ;
-    np::dtype dt1 = np::dtype::get_builtin<float>();
+    auto stride = py::make_tuple(this->width * this->height * this->channel * sizeof(float),
+                  this->width * this->height * sizeof(float),
+                  this->width * sizeof(float),
+                  1 * sizeof(float)) ;
     auto mul_data_ex = np::from_data(arr,
                     dt1,
                     shape,
                     stride,
                     py::object());
-    
     auto shape_dst = py::make_tuple(this->batchPerStep,
                   this->gradientAcclFactor,
                   this->replicationFactor,
@@ -216,17 +212,16 @@ void Dataloader::master_thread(){
                 );
     mul_data_ex = mul_data_ex.reshape(shape_dst);
 
+
+    np::dtype label_type = np::dtype::get_builtin<int>();
     auto shape_label = py::make_tuple(this->batchPerStep,
                                     this->gradientAcclFactor,
                                     this->replicationFactor,
                                     this->batchPerGraph);
-
-    stride = py::make_tuple(this->batchPerGraph * this->replicationFactor * this->gradientAcclFactor,
-                          this->batchPerGraph * this->replicationFactor,
-                          this->batchPerGraph,
-                          1) ;
-
-    np::dtype label_type = np::dtype::get_builtin<int>();
+    stride = py::make_tuple(this->batchPerGraph * this->replicationFactor * this->gradientAcclFactor * sizeof(int),
+                          this->batchPerGraph * this->replicationFactor * sizeof(int),
+                          this->batchPerGraph * sizeof(int),
+                          1 * sizeof(int)) ;
     auto mul_data_ex_label = np::from_data(labelArr,
                                           label_type,
                                           shape_label,
@@ -281,4 +276,5 @@ Dataloader::~Dataloader(){
   delete masterThread;
   delete batches;
   delete imgReadQueue;
+
 }
