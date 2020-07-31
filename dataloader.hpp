@@ -29,10 +29,7 @@ public:
   Dataloader(ImagenetDatasets ds, 
     Transforms transform,
     int epochs,
-    int batchPerGraph,
-    int replicationFactor,
-    int gradientAcclFactor,
-    int batchPerStep,
+    int samplesPerStep,
     int numWorkers,
     float prefetchNum,
     bool isTraining,
@@ -51,10 +48,6 @@ private:
   boost::thread* masterThread;
   ImagenetDatasets ds;
   int epochs;
-  int batchPerGraph;
-  int replicationFactor;
-  int gradientAcclFactor;
-  int batchPerStep;
   int samplesPerStep;
   int numWorkers;
   float prefetchNum;

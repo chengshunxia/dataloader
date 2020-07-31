@@ -19,7 +19,7 @@ BOOST_PYTHON_MODULE(CustomeDataloader)
     .def("transform",  &Transforms::transform);
   
 
-  class_<Dataloader>("Dataloader",init<ImagenetDatasets,Transforms,int,int,int,int,int,int,float,bool,bool,bool>())
+  class_<Dataloader>("Dataloader",init<ImagenetDatasets,Transforms,int,int,int,float,bool,bool,bool>())
     .def("next",  &Dataloader::next)
     .def("__len__", &Dataloader::len)
     .def("get_steps_per_epoch",&Dataloader::get_steps_per_epoch);

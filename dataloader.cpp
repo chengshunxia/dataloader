@@ -22,10 +22,7 @@ namespace np = boost::python::numpy;
 Dataloader::Dataloader(ImagenetDatasets ds, 
                       Transforms transforms,
                       int epochs,
-                      int batchPerGraph,
-                      int replicationFactor,
-                      int gradientAcclFactor,
-                      int batchPerStep,
+                      int samplesPerStep,
                       int numWorkers,
                       float prefetchNum,
                       bool isTraining,
@@ -36,10 +33,7 @@ Dataloader::Dataloader(ImagenetDatasets ds,
   if (isTraining) {
     assert(drop);
   }
-  assert(batchPerGraph>0);
-  assert(replicationFactor>0);
-  assert(gradientAcclFactor>0);
-  assert(batchPerStep>0);
+  assert(samplesPerStep>0);
   assert(numWorkers>=1);
 
   this->originalImagesInfo = ds.get_all_images();
@@ -47,14 +41,7 @@ Dataloader::Dataloader(ImagenetDatasets ds,
   this->height = transforms.dstImageHeight;
   this->width = transforms.dstImageWidth;
   int totalSamples = ds.len();
-  this->batchPerGraph = batchPerGraph;
-  this->replicationFactor = replicationFactor;
-  this->gradientAcclFactor = gradientAcclFactor;
-  this->batchPerStep = batchPerStep;
-  this->samplesPerStep = batchPerGraph * 
-                         replicationFactor *
-                         gradientAcclFactor * 
-                         batchPerStep;
+  this->samplesPerStep = samplesPerStep;
 
   this->stepsPerEpoch = totalSamples / this->samplesPerStep;
   this->totalSteps = this->stepsPerEpoch * epochs;
@@ -202,35 +189,16 @@ void Dataloader::master_thread(){
                     shape,
                     stride,
                     py::object());
-    auto shape_dst = py::make_tuple(this->batchPerStep,
-                  this->gradientAcclFactor,
-                  this->replicationFactor,
-                  this->batchPerGraph,
-                  this->channel,
-                  this->height,
-                  this->width
-                );
-    mul_data_ex = mul_data_ex.reshape(shape_dst);
-
 
     np::dtype label_type = np::dtype::get_builtin<int>();
-    auto shape_label = py::make_tuple(this->batchPerStep,
-                                    this->gradientAcclFactor,
-                                    this->replicationFactor,
-                                    this->batchPerGraph);
-    stride = py::make_tuple(this->batchPerGraph * this->replicationFactor * this->gradientAcclFactor * sizeof(int),
-                          this->batchPerGraph * this->replicationFactor * sizeof(int),
-                          this->batchPerGraph * sizeof(int),
-                          1 * sizeof(int)) ;
     auto mul_data_ex_label = np::from_data(labelArr,
                                           label_type,
-                                          shape_label,
-                                          stride,
+                                          py::make_tuple(this->samplesPerStep),
+                                          py::make_tuple(sizeof(int)),
                                           py::object());
 
     delete gen_latch;
     //format Label Numpy Array
-  
     py::tuple batch = py::make_tuple(mul_data_ex, mul_data_ex_label);
     this->batches->put(batch);
 
