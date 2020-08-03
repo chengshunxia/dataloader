@@ -24,6 +24,28 @@ struct fileReadRequest {
   boost::latch* gen_latch;
 };
 
+class MemChunk {
+  public:
+    float * images;
+    int * labels;
+
+    MemChunk(int samplesPerStep, int channel, int height, int width) {
+      images = (float*) PyMem_Malloc(sizeof (float*) * samplesPerStep * channel * height * width);
+      labels = (int*) PyMem_Malloc(sizeof (int*) * samplesPerStep);
+      assert(images);
+      assert(labels);
+   }
+   ~MemChunk() {
+     if (images) {
+       PyMem_Free(images);
+     }
+    if (labels) {
+       PyMem_Free(labels);
+     }
+     std::cout << "MemChunk freeed" << std::endl;
+   }
+};
+
 class Dataloader {
 public:
   Dataloader(ImagenetDatasets ds, 

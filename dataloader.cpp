@@ -155,8 +155,10 @@ void Dataloader::master_thread(){
                           this->channel *
                           this->height *
                           this->width;
-    float * arr = new float[arrSize];
-    int * labelArr = new int[this->samplesPerStep];
+
+    MemChunk * chunk = new MemChunk(this->samplesPerStep, this->channel, this->height, this->width);
+    float * arr = chunk->images;
+    int * labelArr = chunk->labels;
     boost::latch* gen_latch = new boost::latch(samplesPerStep);
     for (auto i = 0; i < this->samplesPerStep; i++) {
       this->imgReadQueue->put(new fileReadRequest {
