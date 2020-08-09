@@ -9,6 +9,6 @@ time.sleep(30)
 dl_len = len(dl)
 for data in range(0,dl_len):
     data = dl.next()
-    print (data)
+    print (data.image(), data.label())
 #    print (type(data),len(data),type(data[0]),data[0].shape, data[1].shape)
 

@@ -20,7 +20,11 @@ BOOST_PYTHON_MODULE(CustomeDataloader)
   
 
   class_<Dataloader>("Dataloader",init<ImagenetDatasets,Transforms,int,int,int,float,bool,bool,bool>())
-    .def("next",  &Dataloader::next)
+    .def("next",  &Dataloader::next, py::return_value_policy<py::manage_new_object>())
     .def("__len__", &Dataloader::len)
     .def("get_steps_per_epoch",&Dataloader::get_steps_per_epoch);
+
+  class_<Batch>("Batch",no_init)
+    .def("image", &Batch::image)
+    .def("label", &Batch::label);
 }

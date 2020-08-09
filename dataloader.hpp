@@ -16,6 +16,7 @@
 using namespace cv;
 using namespace std;
 namespace py = boost::python;
+namespace np = boost::python::numpy;
 
 struct fileReadRequest {
   std::string imgFilePath;
@@ -36,14 +37,44 @@ class MemChunk {
       assert(labels);
    }
    ~MemChunk() {
-     if (images) {
+    if (images) {
        PyMem_Free(images);
      }
     if (labels) {
        PyMem_Free(labels);
      }
-     std::cout << "MemChunk freeed" << std::endl;
+     std::cout << "MemChunk freed" << std::endl;
    }
+};
+
+struct Batch {
+  public:
+  MemChunk *mem;
+  np::ndarray images;
+  np::ndarray labels;
+  Batch(np::ndarray images ,np::ndarray labels, MemChunk *mem)
+    : images(images),
+      labels(labels),
+      mem(mem){
+  }
+  ~Batch(){
+    if (this->mem->images) {
+      free(this->mem->images);
+    }
+    if (this->mem->labels) {
+      free(this->mem->labels);
+    }
+    free(this->mem);
+
+    std::cout <<"memory chunk freed" << std::endl;
+   }
+  np::ndarray image() {
+    return this->images;
+  } 
+  
+  np::ndarray label() {
+    return this->labels;
+  } 
 };
 
 class Dataloader {
@@ -58,7 +89,7 @@ public:
     bool drop = true,
     bool shuffle = true);
     
-  py::tuple next();
+  Batch* next();
   void batchRelease(py::tuple tp);
   ~Dataloader();
   vector<pair<string,int>> get_next_batch_images_info();
@@ -85,7 +116,7 @@ private:
   int curStepsPerEpoch;
   int curEpoch;
   int totalSendSteps;
-  BoundedBlockingQueue<py::tuple>* batches;
+  BoundedBlockingQueue<Batch *>* batches;
   //boost::mutex fetchMutex;
   BoundedBlockingQueue<fileReadRequest*>* imgReadQueue;
   Transforms transforms;

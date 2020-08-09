@@ -54,7 +54,7 @@ Dataloader::Dataloader(ImagenetDatasets ds,
   get_all_samples_Idx();
 
   this->imgReadQueue = new BoundedBlockingQueue<fileReadRequest*> (1000000);
-  this->batches =  new BoundedBlockingQueue<py::tuple> (prefetchNum);
+  this->batches =  new BoundedBlockingQueue<Batch *> (prefetchNum);
 
   this->workers = new boost::thread_group();
   for (auto i = 0; i < numWorkers; i++ ) {
@@ -148,8 +148,8 @@ void Dataloader::master_thread(){
 #ifdef TPUT_LOGGING
     auto start_time = boost::posix_time::microsec_clock::universal_time();
 #endif
-
-
+    Py_Initialize();
+    np::initialize();
     vector<pair<string,int>> ImagesInfo = get_next_batch_images_info();
     unsigned long long arrSize = this->samplesPerStep * 
                           this->channel *
@@ -186,23 +186,25 @@ void Dataloader::master_thread(){
                   this->width * this->height * sizeof(float),
                   this->width * sizeof(float),
                   1 * sizeof(float)) ;
+    py::object owner_image;
     auto mul_data_ex = np::from_data(arr,
                     dt1,
                     shape,
                     stride,
-                    py::object());
+                    owner_image);
 
     np::dtype label_type = np::dtype::get_builtin<int>();
+    py::object owner_label;
     auto mul_data_ex_label = np::from_data(labelArr,
                                           label_type,
                                           py::make_tuple(this->samplesPerStep),
                                           py::make_tuple(sizeof(int)),
-                                          py::object());
+                                          owner_label);
 
     delete gen_latch;
     //format Label Numpy Array
-    py::tuple batch = py::make_tuple(mul_data_ex, mul_data_ex_label);
-    this->batches->put(batch);
+    Batch *b = new Batch(mul_data_ex,mul_data_ex_label,chunk);
+    this->batches->put(b);
 
 #ifdef TPUT_LOGGING
     auto end_time = boost::posix_time::microsec_clock::universal_time();
@@ -215,7 +217,7 @@ void Dataloader::master_thread(){
   }
 }
 
-py::tuple Dataloader::next() {
+Batch * Dataloader::next() {
   this->totalSendSteps++;
   this->curStepsPerEpoch++;
   return this->batches->take();
