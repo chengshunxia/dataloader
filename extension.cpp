@@ -1,30 +1,28 @@
-#include <boost/python.hpp>
-#include <boost/python/numpy.hpp>
 #include "transforms.hpp"
-#include "dataloader.hpp"
 #include "datasets.hpp"
+#include "dataloader.hpp"
+#include <pybind11/pybind11.h>
 
-namespace py = boost::python;
-namespace np = boost::python::numpy;
-BOOST_PYTHON_MODULE(CustomeDataloader)
-{
-  using namespace boost::python;
-  Py_Initialize();
-  np::initialize();
-  class_<ImagenetDatasets>("ImagenetDatasets",init<std::string,bool>())
-    .def("__len__",  &ImagenetDatasets::len);
+namespace py = pybind11;
 
+PYBIND11_MODULE(customdl, m) {
+    Py_Initialize();
+    py::class_<ImagenetDatasets>(m, "ImagenetDatasets")
+      .def(py::init<const std::string&, bool>())
+      .def("__len__", &ImagenetDatasets::len);
   
-  class_<Transforms>("Transforms",init<bool,bool,bool,int,int,int,float>())
-    .def("transform",  &Transforms::transform);
+    py::class_<Transforms>(m, "Transforms")
+      .def(py::init<bool,bool,bool,int,int,int,float>());
+
+    
+    py::class_<Dataloader>(m, "Dataloader")
+      .def(py::init<ImagenetDatasets,Transforms,int,int,int,float,bool,bool,bool>())
+      .def("__len__", &Dataloader::len)
+      .def("next",  &Dataloader::next);
+
+    py::class_<Batch>(m, "Batch")
+      .def("image", &Batch::image)
+      .def("label", &Batch::label);
   
 
-  class_<Dataloader>("Dataloader",init<ImagenetDatasets,Transforms,int,int,int,float,bool,bool,bool>())
-    .def("next",  &Dataloader::next, py::return_value_policy<py::manage_new_object>())
-    .def("__len__", &Dataloader::len)
-    .def("get_steps_per_epoch",&Dataloader::get_steps_per_epoch);
-
-  class_<Batch>("Batch",no_init)
-    .def("image", &Batch::image)
-    .def("label", &Batch::label);
 }

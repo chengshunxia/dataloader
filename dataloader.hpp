@@ -4,10 +4,12 @@
 #include <vector>
 #include <utility>
 #include <memory>
-#include <boost/python.hpp>
 #include <boost/thread/thread.hpp> 
 #include <boost/thread/mutex.hpp>
 #include <boost/thread/latch.hpp>
+#include <pybind11/pybind11.h>
+#include <pybind11/numpy.h>
+
 
 #include "datasets.hpp"
 #include "transforms.hpp"
@@ -15,8 +17,7 @@
 
 using namespace cv;
 using namespace std;
-namespace py = boost::python;
-namespace np = boost::python::numpy;
+namespace py = pybind11;
 
 struct fileReadRequest {
   std::string imgFilePath;
@@ -50,9 +51,9 @@ class MemChunk {
 struct Batch {
   public:
   MemChunk *mem;
-  np::ndarray images;
-  np::ndarray labels;
-  Batch(np::ndarray images ,np::ndarray labels, MemChunk *mem)
+  py::array images;
+  py::array labels;
+  Batch(py::array images ,py::array labels, MemChunk *mem)
     : images(images),
       labels(labels),
       mem(mem){
@@ -68,11 +69,11 @@ struct Batch {
 
     std::cout <<"memory chunk freed" << std::endl;
    }
-  np::ndarray image() {
+  py::array image() {
     return this->images;
   } 
   
-  np::ndarray label() {
+  py::array label() {
     return this->labels;
   } 
 };
@@ -90,7 +91,6 @@ public:
     bool shuffle = true);
     
   Batch* next();
-  void batchRelease(py::tuple tp);
   ~Dataloader();
   vector<pair<string,int>> get_next_batch_images_info();
   int len();

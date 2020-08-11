@@ -3,14 +3,9 @@
 #include <vector>
 #include <random>
 #include <iostream>
-#include <boost/python.hpp>
-#include <boost/python/numpy.hpp>
-
 #include "transforms.hpp"
 
 using namespace cv;
-namespace py = boost::python;
-namespace np = boost::python::numpy;
 
 Transforms::Transforms (bool enableRandomHFlip,
   bool enableRandomSizeCrop,
@@ -18,10 +13,7 @@ Transforms::Transforms (bool enableRandomHFlip,
   int channel,
   int  dstImageHeight,
   int  dstImageWidth,
-  /*
-  py::list mean,
-  py::list std,
-  */
+
   float randomFlipProb) {
   
   this->enableRandomHFlip = enableRandomHFlip;
@@ -31,16 +23,6 @@ Transforms::Transforms (bool enableRandomHFlip,
   this->dstImageHeight = dstImageHeight;
   this->dstImageWidth = dstImageWidth;
   this->randomFlipProb = randomFlipProb;
-
-  /*
-  py::ssize_t lenMean = py::len(mean);
-  py::ssize_t lenStd = py::len(std);
-  assert(lenMean == lenStd);
-  for (auto i = 0; i < lenMean; i++) {
-    this->mean.push_back(py::extract<float>(mean[i]));
-    this->std.push_back(py::extract<float>(std[i]));
-  } 
-  */
 }
 
 cv::Mat Transforms::transform(cv::Mat& input) {

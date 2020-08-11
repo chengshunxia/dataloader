@@ -2,13 +2,13 @@
 #include <algorithm>
 #include <boost/thread/thread.hpp> 
 #include <boost/thread/latch.hpp>
-#include <boost/python/numpy.hpp>
 #include <boost/random/random_number_generator.hpp>
 #include <boost/random/mersenne_twister.hpp>
 #include <boost/random/uniform_int_distribution.hpp>
 #include <opencv2/highgui/highgui.hpp>
 #include "opencv2/imgproc/imgproc.hpp"
-
+#include <pybind11/pybind11.h>
+#include <pybind11/numpy.h>
 
 #include "datasets.hpp"
 #include "transforms.hpp"
@@ -16,8 +16,7 @@
 #include "dataloader.hpp"
 
 using namespace cv;
-namespace py = boost::python;
-namespace np = boost::python::numpy;
+namespace py = pybind11;
 
 Dataloader::Dataloader(ImagenetDatasets ds, 
                       Transforms transforms,
@@ -149,7 +148,6 @@ void Dataloader::master_thread(){
     auto start_time = boost::posix_time::microsec_clock::universal_time();
 #endif
     Py_Initialize();
-    np::initialize();
     vector<pair<string,int>> ImagesInfo = get_next_batch_images_info();
     unsigned long long arrSize = this->samplesPerStep * 
                           this->channel *
@@ -175,32 +173,29 @@ void Dataloader::master_thread(){
           if (gen_latch->wait_until(boost::chrono::steady_clock::now()+boost::chrono::milliseconds(100)) ==  boost::cv_status::timeout)
             gen_latch->wait();
     
-    np::dtype dt1 = np::dtype::get_builtin<float>();
+    auto dt_image = py::dtype("float32");
     int first_dim = this->samplesPerStep;
-    auto shape = py::make_tuple(first_dim,
-                  channel,
-                  height,
-                  width
-                );
-    auto stride = py::make_tuple(this->width * this->height * this->channel * sizeof(float),
+    std::vector<ssize_t> shape_image {first_dim,
+                                    channel,
+                                    height,
+                                    width
+    };
+    std::vector<ssize_t> stride_image { this->width * this->height * this->channel * sizeof(float),
                   this->width * this->height * sizeof(float),
                   this->width * sizeof(float),
-                  1 * sizeof(float)) ;
-    py::object owner_image;
-    auto mul_data_ex = np::from_data(arr,
-                    dt1,
-                    shape,
-                    stride,
-                    owner_image);
+                  1 * sizeof(float) };
 
-    np::dtype label_type = np::dtype::get_builtin<int>();
-    py::object owner_label;
-    auto mul_data_ex_label = np::from_data(labelArr,
-                                          label_type,
-                                          py::make_tuple(this->samplesPerStep),
-                                          py::make_tuple(sizeof(int)),
-                                          owner_label);
+    auto mul_data_ex = py::array (dt_image,
+                                  shape_image,
+                                  stride_image,
+                                  arr);
 
+   auto dt_label = py::dtype("int32");
+   auto mul_data_ex_label = py::array(dt_label,
+                          {first_dim},
+                          {sizeof(int)},
+                          labelArr);
+  
     delete gen_latch;
     //format Label Numpy Array
     Batch *b = new Batch(mul_data_ex,mul_data_ex_label,chunk);
@@ -223,12 +218,6 @@ Batch * Dataloader::next() {
   return this->batches->take();
 }
 
-void Dataloader::batchRelease(py::tuple tp){
-  /*
-  delete[] tp;
-  delete[] tp;
-  */
-}
 
 int Dataloader::len() {
   return this->totalSteps;
